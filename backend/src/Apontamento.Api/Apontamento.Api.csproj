@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Apontamento.Domain\Apontamento.Domain.csproj" />
+    <ProjectReference Include="..\Apontamento.Infrastructure.MongoDb\Apontamento.Infrastructure.MongoDb.csproj" />
   </ItemGroup>
 
 </Project>

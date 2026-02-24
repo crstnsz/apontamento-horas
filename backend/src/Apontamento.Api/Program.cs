@@ -1,8 +1,11 @@
 using Apontamento.Domain;
+using Apontamento.Domain.Repositories;
+using Apontamento.Infrastructure.MongoDb;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddMongoRepositories(builder.Configuration);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -19,19 +22,19 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 
-var projetos = new List<ProjetoStore>();
-var apontamentos = new List<ApontamentoStore>();
-
-app.MapGet("/api/projetos", () =>
-    Results.Ok(projetos.Select(p => p.ToDto())));
-
-app.MapGet("/api/projetos/{id:guid}", (Guid id) =>
+app.MapGet("/api/projetos", async (IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
 {
-    var projeto = projetos.FirstOrDefault(p => p.Id == id);
+    var projetos = await projetoRepository.ListarAsync(cancellationToken);
+    return Results.Ok(projetos.Select(p => p.ToDto()));
+});
+
+app.MapGet("/api/projetos/{id:guid}", async (Guid id, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
+{
+    var projeto = await projetoRepository.ObterPorIdAsync(id, cancellationToken);
     return projeto is null ? Results.NotFound() : Results.Ok(projeto.ToDto());
 });
 
-app.MapPost("/api/projetos", (ProjetoCreateDto input) =>
+app.MapPost("/api/projetos", async (ProjetoCreateDto input, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
 {
     if (string.IsNullOrWhiteSpace(input.Nome))
     {
@@ -43,120 +46,180 @@ app.MapPost("/api/projetos", (ProjetoCreateDto input) =>
         return Results.BadRequest("Informe pelo menos um valor hora.");
     }
 
-    var projeto = new Projeto(input.Nome, input.ValoresHora[0].ValorHora);
-    for (var i = 1; i < input.ValoresHora.Count; i++)
+    try
     {
-        var valor = input.ValoresHora[i];
-        projeto.DefinirValorHora(valor.Inicio, valor.Fim, valor.ValorHora);
+        var projeto = new Projeto(input.Nome, input.ValoresHora[0].ValorHora);
+        for (var i = 1; i < input.ValoresHora.Count; i++)
+        {
+            var valor = input.ValoresHora[i];
+            projeto.DefinirValorHora(valor.Inicio, valor.Fim, valor.ValorHora);
+        }
+
+        var store = new ProjetoRegistro(Guid.NewGuid(), projeto);
+        await projetoRepository.AdicionarAsync(store, cancellationToken);
+
+        return Results.Created($"/api/projetos/{store.Id}", store.ToDto());
     }
-
-    var store = new ProjetoStore(Guid.NewGuid(), projeto);
-    projetos.Add(store);
-
-    return Results.Created($"/api/projetos/{store.Id}", store.ToDto());
+    catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+    {
+        return Results.BadRequest(ex.Message);
+    }
 });
 
-app.MapPut("/api/projetos/{id:guid}", (Guid id, ProjetoCreateDto input) =>
+app.MapPut("/api/projetos/{id:guid}", async (Guid id, ProjetoCreateDto input, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
 {
-    var index = projetos.FindIndex(p => p.Id == id);
-    if (index < 0)
+    var atual = await projetoRepository.ObterPorIdAsync(id, cancellationToken);
+    if (atual is null)
     {
         return Results.NotFound();
     }
 
-    var projeto = new Projeto(input.Nome, input.ValoresHora[0].ValorHora);
-    for (var i = 1; i < input.ValoresHora.Count; i++)
+    if (string.IsNullOrWhiteSpace(input.Nome))
     {
-        var valor = input.ValoresHora[i];
-        projeto.DefinirValorHora(valor.Inicio, valor.Fim, valor.ValorHora);
+        return Results.BadRequest("Nome do projeto é obrigatório.");
     }
 
-    projetos[index] = new ProjetoStore(id, projeto);
+    if (input.ValoresHora is null || input.ValoresHora.Count == 0)
+    {
+        return Results.BadRequest("Informe pelo menos um valor hora.");
+    }
+
+    try
+    {
+        var projeto = new Projeto(input.Nome, input.ValoresHora[0].ValorHora);
+        for (var i = 1; i < input.ValoresHora.Count; i++)
+        {
+            var valor = input.ValoresHora[i];
+            projeto.DefinirValorHora(valor.Inicio, valor.Fim, valor.ValorHora);
+        }
+
+        await projetoRepository.AtualizarAsync(new ProjetoRegistro(id, projeto), cancellationToken);
+        return Results.NoContent();
+    }
+    catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+});
+
+app.MapDelete("/api/projetos/{id:guid}", async (Guid id, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
+{
+    var atual = await projetoRepository.ObterPorIdAsync(id, cancellationToken);
+    if (atual is null)
+    {
+        return Results.NotFound();
+    }
+
+    await projetoRepository.RemoverAsync(id, cancellationToken);
     return Results.NoContent();
 });
 
-app.MapDelete("/api/projetos/{id:guid}", (Guid id) =>
+app.MapGet("/api/apontamentos", async (IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
 {
-    var removido = projetos.RemoveAll(p => p.Id == id);
-    return removido == 0 ? Results.NotFound() : Results.NoContent();
+    var apontamentos = await apontamentoRepository.ListarAsync(cancellationToken);
+    return Results.Ok(apontamentos.Select(a => a.ToDto()));
 });
 
-app.MapGet("/api/apontamentos", () =>
-    Results.Ok(apontamentos.Select(a => a.ToDto())));
-
-app.MapPost("/api/apontamentos", (ApontamentoCreateDto input) =>
+app.MapPost("/api/apontamentos", async (ApontamentoCreateDto input, IProjetoRepository projetoRepository, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
 {
-    var projeto = projetos.FirstOrDefault(p => p.Id == input.ProjetoId);
+    var projeto = await projetoRepository.ObterPorIdAsync(input.ProjetoId, cancellationToken);
     if (projeto is null)
     {
         return Results.BadRequest("Projeto não encontrado.");
     }
 
-    var dia = new DiaTrabalhado(input.Data);
-    foreach (var periodo in input.Periodos)
+    try
     {
-        dia.AdicionarPeriodo(periodo.Descricao, projeto.Projeto, periodo.Inicio, periodo.Fim);
+        var dia = new DiaTrabalhado(input.Data);
+        foreach (var periodo in input.Periodos)
+        {
+            dia.AdicionarPeriodo(periodo.Descricao, projeto.Projeto, periodo.Inicio, periodo.Fim);
+        }
+
+        var store = new ApontamentoRegistro(Guid.NewGuid(), dia, projeto.Id);
+        await apontamentoRepository.AdicionarAsync(store, cancellationToken);
+
+        return Results.Created($"/api/apontamentos/{store.Id}", store.ToDto());
     }
-
-    var store = new ApontamentoStore(Guid.NewGuid(), dia, projeto.Id);
-    apontamentos.Add(store);
-
-    return Results.Created($"/api/apontamentos/{store.Id}", store.ToDto());
+    catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+    {
+        return Results.BadRequest(ex.Message);
+    }
 });
 
-app.MapPut("/api/apontamentos/{id:guid}", (Guid id, ApontamentoCreateDto input) =>
+app.MapPut("/api/apontamentos/{id:guid}", async (Guid id, ApontamentoCreateDto input, IProjetoRepository projetoRepository, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
 {
-    var index = apontamentos.FindIndex(a => a.Id == id);
-    if (index < 0)
+    var atual = await apontamentoRepository.ObterPorIdAsync(id, cancellationToken);
+    if (atual is null)
     {
         return Results.NotFound();
     }
 
-    var projeto = projetos.FirstOrDefault(p => p.Id == input.ProjetoId);
+    var projeto = await projetoRepository.ObterPorIdAsync(input.ProjetoId, cancellationToken);
     if (projeto is null)
     {
         return Results.BadRequest("Projeto não encontrado.");
     }
 
-    var dia = new DiaTrabalhado(input.Data);
-    foreach (var periodo in input.Periodos)
+    try
     {
-        dia.AdicionarPeriodo(periodo.Descricao, projeto.Projeto, periodo.Inicio, periodo.Fim);
+        var dia = new DiaTrabalhado(input.Data);
+        foreach (var periodo in input.Periodos)
+        {
+            dia.AdicionarPeriodo(periodo.Descricao, projeto.Projeto, periodo.Inicio, periodo.Fim);
+        }
+
+        await apontamentoRepository.AtualizarAsync(new ApontamentoRegistro(id, dia, projeto.Id), cancellationToken);
+        return Results.NoContent();
+    }
+    catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+});
+
+app.MapDelete("/api/apontamentos/{id:guid}", async (Guid id, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
+{
+    var atual = await apontamentoRepository.ObterPorIdAsync(id, cancellationToken);
+    if (atual is null)
+    {
+        return Results.NotFound();
     }
 
-    apontamentos[index] = new ApontamentoStore(id, dia, projeto.Id);
+    await apontamentoRepository.RemoverAsync(id, cancellationToken);
     return Results.NoContent();
 });
 
-app.MapDelete("/api/apontamentos/{id:guid}", (Guid id) =>
-{
-    var removido = apontamentos.RemoveAll(a => a.Id == id);
-    return removido == 0 ? Results.NotFound() : Results.NoContent();
-});
-
-app.MapGet("/api/consultas", (DateOnly inicio, DateOnly fim) =>
+app.MapGet("/api/consultas", async (DateOnly inicio, DateOnly fim, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
 {
     if (fim < inicio)
     {
         return Results.BadRequest("Data fim deve ser maior ou igual à data início.");
     }
 
+    var apontamentos = await apontamentoRepository.ListarPorPeriodoAsync(inicio, fim, cancellationToken);
+
     var dias = (fim.ToDateTime(TimeOnly.MinValue) - inicio.ToDateTime(TimeOnly.MinValue)).Days + 1;
     var horasPrevistas = dias * 8.5m;
 
     var horasRealizadas = apontamentos
-        .Where(a => a.Dia.Data >= inicio && a.Dia.Data <= fim)
         .Sum(a => (decimal)a.Dia.TotalHoras.TotalHours);
 
     return Results.Ok(new ConsultaDto(horasPrevistas, horasRealizadas, horasPrevistas - horasRealizadas));
 });
 
-app.MapGet("/api/consultas/export", (DateOnly inicio, DateOnly fim) =>
+app.MapGet("/api/consultas/export", async (DateOnly inicio, DateOnly fim, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
 {
+    if (fim < inicio)
+    {
+        return Results.BadRequest("Data fim deve ser maior ou igual à data início.");
+    }
+
+    var apontamentos = await apontamentoRepository.ListarPorPeriodoAsync(inicio, fim, cancellationToken);
+
     var dias = (fim.ToDateTime(TimeOnly.MinValue) - inicio.ToDateTime(TimeOnly.MinValue)).Days + 1;
     var horasPrevistas = dias * 8.5m;
     var horasRealizadas = apontamentos
-        .Where(a => a.Dia.Data >= inicio && a.Dia.Data <= fim)
         .Sum(a => (decimal)a.Dia.TotalHoras.TotalHours);
     var diferenca = horasPrevistas - horasRealizadas;
 
@@ -195,3 +258,14 @@ sealed record ApontamentoStore(Guid Id, DiaTrabalhado Dia, Guid ProjetoId)
             Dia.ValorTotal,
             Dia.Periodos.Select(p => new PeriodoDto(p.Inicio, p.Fim, p.DescricaoServico)).ToList());
 }
+
+static class DtoMappings
+{
+    public static ProjetoDto ToDto(this ProjetoRegistro registro)
+        => new ProjetoStore(registro.Id, registro.Projeto).ToDto();
+
+    public static ApontamentoDto ToDto(this ApontamentoRegistro registro)
+        => new ApontamentoStore(registro.Id, registro.Dia, registro.ProjetoId).ToDto();
+}
+
+public partial class Program;

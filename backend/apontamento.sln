@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apontamento.Test", "test\Ap
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apontamento.Api", "src\Apontamento.Api\Apontamento.Api.csproj", "{AB64E4B2-3581-4547-BDA7-9E1EF66DFC5E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apontamento.Infrastructure.MongoDb", "src\Apontamento.Infrastructure.MongoDb\Apontamento.Infrastructure.MongoDb.csproj", "{085D0918-8CE0-406D-9D8A-C44E30F82EE2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,18 @@ Global
 		{AB64E4B2-3581-4547-BDA7-9E1EF66DFC5E}.Release|x64.Build.0 = Release|Any CPU
 		{AB64E4B2-3581-4547-BDA7-9E1EF66DFC5E}.Release|x86.ActiveCfg = Release|Any CPU
 		{AB64E4B2-3581-4547-BDA7-9E1EF66DFC5E}.Release|x86.Build.0 = Release|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Debug|x64.Build.0 = Debug|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Debug|x86.Build.0 = Debug|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Release|x64.ActiveCfg = Release|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Release|x64.Build.0 = Release|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Release|x86.ActiveCfg = Release|Any CPU
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,5 +81,6 @@ Global
 		{6D55C325-699F-4A1A-B0B0-0CA012FD8D58} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{B3490BA5-5F74-4B20-AFFA-BA9D685B42EE} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
 		{AB64E4B2-3581-4547-BDA7-9E1EF66DFC5E} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{085D0918-8CE0-406D-9D8A-C44E30F82EE2} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

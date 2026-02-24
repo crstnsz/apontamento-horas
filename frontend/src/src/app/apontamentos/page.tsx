@@ -11,6 +11,7 @@ import {
   type ApontamentoDto,
   type ProjetoDto,
 } from "@/lib/api";
+import { DatePickerInput } from "@/components/date-picker-input";
 
 type PeriodoForm = {
   tempId: string;
@@ -170,12 +171,7 @@ export default function ApontamentosPage() {
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <label className="flex flex-col gap-2 text-sm">
             Data
-            <input
-              type="date"
-              className="h-10 rounded-md border px-3"
-              value={data}
-              onChange={(event) => setData(event.target.value)}
-            />
+            <DatePickerInput value={data} onChange={setData} />
           </label>
           <label className="flex flex-col gap-2 text-sm">
             Projeto

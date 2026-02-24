@@ -124,3 +124,34 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .react-datepicker {
+    @apply rounded-md border border-border bg-popover text-popover-foreground;
+  }
+
+  .react-datepicker__header {
+    @apply border-b border-border bg-popover;
+  }
+
+  .react-datepicker__current-month,
+  .react-datepicker-time__header,
+  .react-datepicker-year-header {
+    @apply text-sm font-medium text-foreground;
+  }
+
+  .react-datepicker__day-name,
+  .react-datepicker__day,
+  .react-datepicker__time-name {
+    @apply text-sm text-foreground;
+  }
+
+  .react-datepicker__day:hover {
+    @apply rounded-md bg-accent text-accent-foreground;
+  }
+
+  .react-datepicker__day--selected,
+  .react-datepicker__day--keyboard-selected {
+    @apply rounded-md bg-primary text-primary-foreground;
+  }
+}

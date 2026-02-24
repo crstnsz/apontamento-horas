@@ -39,7 +39,7 @@ export type ApontamentoCreateInput = {
 };
 
 const baseUrl =
-  process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5130";
 
 async function safeFetch<T>(path: string): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, { cache: "no-store" });

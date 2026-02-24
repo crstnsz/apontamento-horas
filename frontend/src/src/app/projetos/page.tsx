@@ -10,6 +10,7 @@ import {
   type ProjetoDto,
   type ValorHoraDto,
 } from "@/lib/api";
+import { DatePickerInput } from "@/components/date-picker-input";
 
 type ValorHoraForm = ValorHoraDto & { tempId: string };
 
@@ -64,9 +65,10 @@ export default function ProjetosPage() {
 
     const payload: ProjetoCreateInput = {
       nome,
-      valoresHora: valoresFiltrados.map(({ tempId, ...valor }) => ({
-        ...valor,
-        fim: valor.fim || null,
+      valoresHora: valoresFiltrados.map(({ inicio, fim, valorHora }) => ({
+        inicio,
+        fim: fim || null,
+        valorHora,
       })),
     };
 
@@ -160,23 +162,19 @@ export default function ProjetosPage() {
               <div key={valor.tempId} className="grid gap-3 md:grid-cols-4">
                 <label className="flex flex-col gap-2 text-sm">
                   Início
-                  <input
-                    type="date"
-                    className="h-10 rounded-md border px-3"
+                  <DatePickerInput
                     value={valor.inicio}
-                    onChange={(event) =>
-                      atualizarValor(valor.tempId, "inicio", event.target.value)
+                    onChange={(novoValor) =>
+                      atualizarValor(valor.tempId, "inicio", novoValor)
                     }
                   />
                 </label>
                 <label className="flex flex-col gap-2 text-sm">
                   Fim (opcional)
-                  <input
-                    type="date"
-                    className="h-10 rounded-md border px-3"
+                  <DatePickerInput
                     value={valor.fim ?? ""}
-                    onChange={(event) =>
-                      atualizarValor(valor.tempId, "fim", event.target.value)
+                    onChange={(novoValor) =>
+                      atualizarValor(valor.tempId, "fim", novoValor)
                     }
                   />
                 </label>

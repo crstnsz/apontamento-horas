@@ -1,4 +1,12 @@
+"use client";
+
+import { useState } from "react";
+import { DatePickerInput } from "@/components/date-picker-input";
+
 export default function ConsultasPage() {
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <header className="flex flex-col gap-2">
@@ -12,11 +20,11 @@ export default function ConsultasPage() {
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <label className="flex flex-col gap-2 text-sm">
             Data início
-            <input type="date" className="h-10 rounded-md border px-3" />
+            <DatePickerInput value={dataInicio} onChange={setDataInicio} />
           </label>
           <label className="flex flex-col gap-2 text-sm">
             Data fim
-            <input type="date" className="h-10 rounded-md border px-3" />
+            <DatePickerInput value={dataFim} onChange={setDataFim} min={dataInicio} />
           </label>
           <div className="flex items-end gap-2">
             <button className="h-10 rounded-md bg-black px-4 text-sm font-medium text-white">
