@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: default
+data:
+  ASPNETCORE_ENVIRONMENT: Production
+  MongoDb__ConnectionString: mongodb://admin:password123@mongo-service:27017/apontamento_horas?authSource=admin
+  MongoDb__DatabaseName: apontamento_horas
+  MongoDb__ProjetosCollectionName: projetos
+  MongoDb__ApontamentosCollectionName: apontamentos
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: apontamento-api:latest  # Substitua pela sua imagem Docker
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: backend-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: default
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: LoadBalancer

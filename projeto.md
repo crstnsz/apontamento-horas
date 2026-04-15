@@ -316,3 +316,44 @@
 6. Adicionar camada Application (casos de uso) para desacoplar regras de orquestração dos endpoints mínimos.
 7. Avaliar migração para banco relacional ou versionamento de documentos se houver novas regras de consulta.
 
+#Infraestrutura e DevOps (atualizado em 15/04/2026)
+
+##Decisão
+
+- Adotar Kubernetes para orquestração de containers, permitindo deploy escalável e acessível em intranet.
+- Criar Dockerfiles para backend (.NET) e frontend (Next.js) para containerização.
+- Configurar manifests YAML para MongoDB (StatefulSet com persistência), backend e frontend, com Services LoadBalancer para exposição externa.
+
+##Estrutura criada
+
+- `devops/`
+    - `mongo.yaml`: StatefulSet, PVC (10Gi), ConfigMap e Service para MongoDB.
+    - `backend.yaml`: Deployment, ConfigMap e Service LoadBalancer para API .NET.
+    - `frontend.yaml`: Deployment e Service LoadBalancer para Next.js.
+    - `README.md`: Instruções para deploy e acesso.
+- `backend/src/Apontamento.Api/`
+    - `Dockerfile`: Multi-stage build para .NET 8.
+    - `appsettings.json`: Atualizado com connection string para K8s e Kestrel HTTP na porta 8080.
+- `frontend/src/`
+    - `Dockerfile`: Multi-stage build para Next.js standalone.
+    - `next.config.ts`: Adicionado `output: 'standalone'` para otimização.
+
+##Configuração
+
+- Imagens Docker: `apontamento-api:latest` e `apontamento-frontend:latest` (devem ser built e pushed para registry).
+- Acesso: Services LoadBalancer expõem backend (porta 80) e frontend (porta 80) para intranet.
+- Persistência: MongoDB com PVC para dados duráveis.
+
+##Resultado técnico
+
+- Aplicação containerizada e orquestrada, pronta para deploy em cluster K8s.
+- Configurações ajustadas para variáveis de ambiente e HTTP interno (sem HTTPS forçado).
+- Exposição externa via LoadBalancer, acessível de outras máquinas na intranet.
+
+##Atualizações realizadas em 15/04/2026
+
+- Dockerfiles criados para backend e frontend.
+- Manifests K8s configurados com ConfigMaps e persistência.
+- `appsettings.json` e `next.config.ts` ajustados para K8s.
+- Pasta `devops/` adicionada com documentação.
+
