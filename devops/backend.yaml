@@ -28,6 +28,7 @@ spec:
       containers:
       - name: backend
         image: apontamento-api:latest  # Substitua pela sua imagem Docker
+        imagePullPolicy: Never
         ports:
         - containerPort: 8080
         envFrom:
