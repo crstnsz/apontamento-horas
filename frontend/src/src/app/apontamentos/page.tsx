@@ -12,6 +12,7 @@ import {
   type ProjetoDto,
 } from "@/lib/api";
 import { DatePickerInput } from "@/components/date-picker-input";
+import { generateUUID } from "@/lib/utils";
 
 type PeriodoForm = {
   tempId: string;
@@ -21,7 +22,7 @@ type PeriodoForm = {
 };
 
 const emptyPeriodo = (): PeriodoForm => ({
-  tempId: crypto.randomUUID(),
+  tempId: generateUUID(),
   inicio: "",
   fim: "",
   descricao: "",
@@ -116,7 +117,7 @@ export default function ApontamentosPage() {
     setProjetoId(apontamento.projetoId);
     setPeriodos(
       apontamento.periodos.map((periodo) => ({
-        tempId: crypto.randomUUID(),
+        tempId: generateUUID(),
         inicio: toInputTime(periodo.inicio),
         fim: toInputTime(periodo.fim),
         descricao: periodo.descricao,

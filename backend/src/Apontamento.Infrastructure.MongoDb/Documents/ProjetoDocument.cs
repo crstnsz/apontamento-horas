@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace Apontamento.Infrastructure.MongoDb.Documents;
@@ -7,6 +8,7 @@ namespace Apontamento.Infrastructure.MongoDb.Documents;
 public sealed class ProjetoDocument
 {
     [BsonId]
+    [BsonGuidRepresentation(GuidRepresentation.Standard)]
     public Guid Id { get; set; }
 
     public string Nome { get; set; } = string.Empty;

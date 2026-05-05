@@ -11,11 +11,12 @@ import {
   type ValorHoraDto,
 } from "@/lib/api";
 import { DatePickerInput } from "@/components/date-picker-input";
+import { generateUUID } from "@/lib/utils";
 
 type ValorHoraForm = ValorHoraDto & { tempId: string };
 
 const emptyValorHora = (): ValorHoraForm => ({
-  tempId: crypto.randomUUID(),
+  tempId: generateUUID(),
   inicio: "",
   fim: null,
   valorHora: 0,
@@ -94,7 +95,7 @@ export default function ProjetosPage() {
     setValoresHora(
       projeto.valoresHora.map((valor) => ({
         ...valor,
-        tempId: crypto.randomUUID(),
+        tempId: generateUUID(),
       }))
     );
   };

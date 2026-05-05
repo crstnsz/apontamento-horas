@@ -4,7 +4,7 @@ using Apontamento.Infrastructure.MongoDb;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
+//builder.Services.AddOpenApi();
 builder.Services.AddMongoRepositories(builder.Configuration);
 builder.Services.AddCors(options =>
 {
@@ -16,16 +16,23 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    //app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+// app.UseHttpsRedirection();
 
 app.MapGet("/api/projetos", async (IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
 {
-    var projetos = await projetoRepository.ListarAsync(cancellationToken);
-    return Results.Ok(projetos.Select(p => p.ToDto()));
+    try
+    {
+        var projetos = await projetoRepository.ListarAsync(cancellationToken);
+        return Results.Ok(projetos.Select(p => p.ToDto()));
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
 });
 
 app.MapGet("/api/projetos/{id:guid}", async (Guid id, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>

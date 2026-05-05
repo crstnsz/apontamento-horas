@@ -3,14 +3,14 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy csproj files and restore dependencies
-COPY ["Apontamento.Api.csproj", "."]
-COPY ["../Apontamento.Domain/Apontamento.Domain.csproj", "../Apontamento.Domain/"]
-COPY ["../Apontamento.Infrastructure.MongoDb/Apontamento.Infrastructure.MongoDb.csproj", "../Apontamento.Infrastructure.MongoDb/"]
-RUN dotnet restore "Apontamento.Api.csproj"
+COPY ["src/Apontamento.Api/Apontamento.Api.csproj", "src/Apontamento.Api/"]
+COPY ["src/Apontamento.Domain/Apontamento.Domain.csproj", "src/Apontamento.Domain/"]
+COPY ["src/Apontamento.Infrastructure.MongoDb/Apontamento.Infrastructure.MongoDb.csproj", "src/Apontamento.Infrastructure.MongoDb/"]
+RUN dotnet restore "src/Apontamento.Api/Apontamento.Api.csproj"
 
 # Copy everything else and build
 COPY . .
-WORKDIR "/src"
+WORKDIR "/src/src/Apontamento.Api"
 RUN dotnet build "Apontamento.Api.csproj" -c Release -o /app/build
 
 # Publish the app
