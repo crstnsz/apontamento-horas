@@ -38,11 +38,27 @@ export type ApontamentoCreateInput = {
   }[];
 };
 
-const baseUrl =
+export const baseUrl =
   process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "";
 
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (typeof window !== "undefined") {
+    const match = document.cookie.match(/(^| )auth-token=([^;]+)/);
+    if (match && match[2]) {
+      headers["Authorization"] = `Bearer ${match[2]}`;
+    }
+  }
+  return headers;
+}
+
 async function safeFetch<T>(path: string): Promise<T> {
-  const response = await fetch(`${baseUrl}${path}`, { cache: "no-store" });
+  const response = await fetch(`${baseUrl}${path}`, {
+    cache: "no-store",
+    headers: {
+      ...getAuthHeaders(),
+    },
+  });
   if (!response.ok) {
     throw new Error("Erro ao carregar dados da API.");
   }
@@ -54,6 +70,7 @@ async function sendJson(path: string, method: "POST" | "PUT" | "DELETE", body?: 
     method,
     headers: {
       "Content-Type": "application/json",
+      ...getAuthHeaders(),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -108,4 +125,22 @@ export async function updateApontamento(id: string, input: ApontamentoCreateInpu
 
 export async function deleteApontamento(id: string) {
   return sendJson(`/api/apontamentos/${id}`, "DELETE");
+}
+
+export async function login(usuario: string, senha: string): Promise<string> {
+  const response = await fetch(`${baseUrl}/api/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ usuario, senha }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Credenciais inválidas ou erro no servidor.");
+  }
+
+  const data = await response.json() as { token: string };
+  return data.token;
 }

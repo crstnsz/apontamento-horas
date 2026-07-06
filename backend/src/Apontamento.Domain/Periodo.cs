@@ -25,7 +25,8 @@ public class Periodo
         }
         
         private static bool DescricaoServicoValida(string descricaoServico)
-                => !string.IsNullOrWhiteSpace(descricaoServico) && descricaoServico.Length <= 100;
+                => !string.IsNullOrWhiteSpace(descricaoServico) 
+                && descricaoServico.Length <= 100;
 
         public Projeto Projeto { get; private set; }
 
@@ -36,10 +37,12 @@ public class Periodo
         public TimeSpan TotalHoras => Fim - Inicio;
 
         public decimal CalcularValorTotal(DateOnly data)
-                => Convert.ToDecimal(TotalHoras.TotalHours) * Projeto.ObterValorHora(data);
+                => Convert.ToDecimal(TotalHoras.TotalHours)
+                   * Projeto.ObterValorHora(data);
 
-        public decimal CalcularValorTotal(DateTime dataHora)
-                => Convert.ToDecimal(TotalHoras.TotalHours) * Projeto.ObterValorHora(dataHora);
+        public decimal CalcularValorTotal(DateTime dataHora) 
+                => Convert.ToDecimal(TotalHoras.TotalHours)
+                   * Projeto.ObterValorHora(dataHora);
 
         public string DescricaoServico {get; private set;}
 

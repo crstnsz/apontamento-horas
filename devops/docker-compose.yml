@@ -5,9 +5,8 @@ services:
     image: mongo:7.0
     container_name: apontamento-mongo
     restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
+    env_file:
+      - ./mongo.env
     volumes:
       - mongo-data:/data/db
     networks:
@@ -22,12 +21,8 @@ services:
     restart: unless-stopped
     depends_on:
       - mongo
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      MongoDb__ConnectionString: mongodb://admin:password123@mongo:27017/apontamento_horas?authSource=admin
-      MongoDb__DatabaseName: apontamento_horas
-      MongoDb__ProjetosCollectionName: projetos
-      MongoDb__ApontamentosCollectionName: apontamentos
+    env_file:
+      - ./backend.env
     ports:
       - "8080:8080"
     networks:
@@ -42,8 +37,8 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
-    environment:
-      NEXT_PUBLIC_API_URL: "http://192.168.0.67:8080"
+    env_file:
+      - ./frontend.env      
     ports:
       - "3000:3000"
     networks:

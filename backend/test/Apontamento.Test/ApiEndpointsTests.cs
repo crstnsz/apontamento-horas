@@ -12,6 +12,14 @@ namespace Apontamento.Api.Tests;
 
 public class ApiEndpointsTests
 {
+    private async Task AuthenticateClientAsync(HttpClient client)
+    {
+        var response = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("admin", "admin"));
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", body!.Token);
+    }
+
     [Fact]
     public async Task Deve_Criar_E_Listar_Projeto()
     {
@@ -20,6 +28,7 @@ public class ApiEndpointsTests
 
         await using var factory = new CustomWebApplicationFactory(projetoRepository, apontamentoRepository);
         var client = factory.CreateClient();
+        await AuthenticateClientAsync(client);
 
         var payload = new
         {
@@ -54,6 +63,7 @@ public class ApiEndpointsTests
 
         await using var factory = new CustomWebApplicationFactory(projetoRepository, apontamentoRepository);
         var client = factory.CreateClient();
+        await AuthenticateClientAsync(client);
 
         var payload = new
         {
@@ -93,6 +103,7 @@ public class ApiEndpointsTests
 
         await using var factory = new CustomWebApplicationFactory(projetoRepository, apontamentoRepository);
         var client = factory.CreateClient();
+        await AuthenticateClientAsync(client);
 
         var consulta = await client.GetFromJsonAsync<ConsultaResponse>("/api/consultas?inicio=2026-02-24&fim=2026-02-24");
 
@@ -100,6 +111,49 @@ public class ApiEndpointsTests
         consulta.HorasPrevistas.ShouldBe(8.5m);
         consulta.HorasRealizadas.ShouldBe(4m);
         consulta.Diferenca.ShouldBe(4.5m);
+    }
+
+    [Fact]
+    public async Task Login_Com_Credenciais_Validas_Deve_Retornar_Token()
+    {
+        var projetoRepository = new ProjetoRepositoryFake();
+        var apontamentoRepository = new ApontamentoRepositoryFake();
+
+        await using var factory = new CustomWebApplicationFactory(projetoRepository, apontamentoRepository);
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("admin", "admin"));
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        
+        var body = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        body.ShouldNotBeNull();
+        body.Token.ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task Login_Com_Credenciais_Invalidas_Deve_Retornar_Unauthorized()
+    {
+        var projetoRepository = new ProjetoRepositoryFake();
+        var apontamentoRepository = new ApontamentoRepositoryFake();
+
+        await using var factory = new CustomWebApplicationFactory(projetoRepository, apontamentoRepository);
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("admin", "wrongpassword"));
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Chamada_Sem_Token_Deve_Retornar_Unauthorized()
+    {
+        var projetoRepository = new ProjetoRepositoryFake();
+        var apontamentoRepository = new ApontamentoRepositoryFake();
+
+        await using var factory = new CustomWebApplicationFactory(projetoRepository, apontamentoRepository);
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/projetos");
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 }
 

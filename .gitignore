@@ -79,3 +79,6 @@ node_modules/
 *.tmp
 *.temp
 *.bak
+
+# Environment files
+*.env

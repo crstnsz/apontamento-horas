@@ -1,11 +1,47 @@
 using Apontamento.Domain;
 using Apontamento.Domain.Repositories;
 using Apontamento.Infrastructure.MongoDb;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+                     .AddEnvironmentVariables();
+
 //builder.Services.AddOpenApi();
 builder.Services.AddMongoRepositories(builder.Configuration);
+
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT Secret Key is not configured.");
+var issuer = jwtSettings["Issuer"];
+var audience = jwtSettings["Audience"];
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = issuer,
+        ValidAudience = audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+    };
+});
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -22,7 +58,45 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 // app.UseHttpsRedirection();
 
-app.MapGet("/api/projetos", async (IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapPost("/api/auth/login", (LoginRequest request, IConfiguration configuration) =>
+{
+    if (request.Usuario == configuration.GetValue<string>("Admin:Username")
+     && request.Senha == configuration.GetValue<string>("Admin:Password"))
+    {
+        var jwtSettings = configuration.GetSection("Jwt");
+        var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT Secret Key is not configured.");
+        var issuer = jwtSettings["Issuer"];
+        var audience = jwtSettings["Audience"];
+
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, request.Usuario),
+            new Claim(ClaimTypes.Role, "Admin")
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: DateTime.Now.AddHours(8),
+            signingCredentials: credentials);
+
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+        return Results.Ok(new LoginResponse(tokenString));
+    }
+
+    return Results.Unauthorized();
+}).AllowAnonymous();
+
+var api = app.MapGroup("").RequireAuthorization();
+
+api.MapGet("/api/projetos", async (IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
 {
     try
     {
@@ -35,13 +109,13 @@ app.MapGet("/api/projetos", async (IProjetoRepository projetoRepository, Cancell
     }
 });
 
-app.MapGet("/api/projetos/{id:guid}", async (Guid id, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
+api.MapGet("/api/projetos/{id:guid}", async (Guid id, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
 {
     var projeto = await projetoRepository.ObterPorIdAsync(id, cancellationToken);
     return projeto is null ? Results.NotFound() : Results.Ok(projeto.ToDto());
 });
 
-app.MapPost("/api/projetos", async (ProjetoCreateDto input, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
+api.MapPost("/api/projetos", async (ProjetoCreateDto input, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
 {
     if (string.IsNullOrWhiteSpace(input.Nome))
     {
@@ -73,7 +147,7 @@ app.MapPost("/api/projetos", async (ProjetoCreateDto input, IProjetoRepository p
     }
 });
 
-app.MapPut("/api/projetos/{id:guid}", async (Guid id, ProjetoCreateDto input, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
+api.MapPut("/api/projetos/{id:guid}", async (Guid id, ProjetoCreateDto input, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
 {
     var atual = await projetoRepository.ObterPorIdAsync(id, cancellationToken);
     if (atual is null)
@@ -109,7 +183,7 @@ app.MapPut("/api/projetos/{id:guid}", async (Guid id, ProjetoCreateDto input, IP
     }
 });
 
-app.MapDelete("/api/projetos/{id:guid}", async (Guid id, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
+api.MapDelete("/api/projetos/{id:guid}", async (Guid id, IProjetoRepository projetoRepository, CancellationToken cancellationToken) =>
 {
     var atual = await projetoRepository.ObterPorIdAsync(id, cancellationToken);
     if (atual is null)
@@ -121,13 +195,13 @@ app.MapDelete("/api/projetos/{id:guid}", async (Guid id, IProjetoRepository proj
     return Results.NoContent();
 });
 
-app.MapGet("/api/apontamentos", async (IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
+api.MapGet("/api/apontamentos", async (IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
 {
     var apontamentos = await apontamentoRepository.ListarAsync(cancellationToken);
     return Results.Ok(apontamentos.Select(a => a.ToDto()));
 });
 
-app.MapPost("/api/apontamentos", async (ApontamentoCreateDto input, IProjetoRepository projetoRepository, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
+api.MapPost("/api/apontamentos", async (ApontamentoCreateDto input, IProjetoRepository projetoRepository, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
 {
     var projeto = await projetoRepository.ObterPorIdAsync(input.ProjetoId, cancellationToken);
     if (projeto is null)
@@ -154,7 +228,7 @@ app.MapPost("/api/apontamentos", async (ApontamentoCreateDto input, IProjetoRepo
     }
 });
 
-app.MapPut("/api/apontamentos/{id:guid}", async (Guid id, ApontamentoCreateDto input, IProjetoRepository projetoRepository, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
+api.MapPut("/api/apontamentos/{id:guid}", async (Guid id, ApontamentoCreateDto input, IProjetoRepository projetoRepository, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
 {
     var atual = await apontamentoRepository.ObterPorIdAsync(id, cancellationToken);
     if (atual is null)
@@ -185,7 +259,7 @@ app.MapPut("/api/apontamentos/{id:guid}", async (Guid id, ApontamentoCreateDto i
     }
 });
 
-app.MapDelete("/api/apontamentos/{id:guid}", async (Guid id, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
+api.MapDelete("/api/apontamentos/{id:guid}", async (Guid id, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
 {
     var atual = await apontamentoRepository.ObterPorIdAsync(id, cancellationToken);
     if (atual is null)
@@ -197,7 +271,7 @@ app.MapDelete("/api/apontamentos/{id:guid}", async (Guid id, IApontamentoReposit
     return Results.NoContent();
 });
 
-app.MapGet("/api/consultas", async (DateOnly inicio, DateOnly fim, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
+api.MapGet("/api/consultas", async (DateOnly inicio, DateOnly fim, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
 {
     if (fim < inicio)
     {
@@ -215,7 +289,7 @@ app.MapGet("/api/consultas", async (DateOnly inicio, DateOnly fim, IApontamentoR
     return Results.Ok(new ConsultaDto(horasPrevistas, horasRealizadas, horasPrevistas - horasRealizadas));
 });
 
-app.MapGet("/api/consultas/export", async (DateOnly inicio, DateOnly fim, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
+api.MapGet("/api/consultas/export", async (DateOnly inicio, DateOnly fim, IApontamentoRepository apontamentoRepository, CancellationToken cancellationToken) =>
 {
     if (fim < inicio)
     {
@@ -247,6 +321,9 @@ record ApontamentoCreateDto(DateOnly Data, Guid ProjetoId, List<PeriodoDto> Peri
 record ApontamentoDto(Guid Id, DateOnly Data, Guid ProjetoId, decimal TotalHoras, decimal ValorTotal, List<PeriodoDto> Periodos);
 
 record ConsultaDto(decimal HorasPrevistas, decimal HorasRealizadas, decimal Diferenca);
+
+public record LoginRequest(string Usuario, string Senha);
+public record LoginResponse(string Token);
 
 sealed record ProjetoStore(Guid Id, Projeto Projeto)
 {
